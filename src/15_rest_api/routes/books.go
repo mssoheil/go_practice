@@ -44,6 +44,11 @@ func findBook(id string) *Book {
 
 }
 
+func itemNotFound(response http.ResponseWriter) {
+	response.WriteHeader(http.StatusNotFound)
+	json.NewEncoder(response).Encode("Item not found")
+}
+
 func getBook(response http.ResponseWriter, request *http.Request) {
 	setContentType(response)
 
@@ -54,10 +59,10 @@ func getBook(response http.ResponseWriter, request *http.Request) {
 	if book != nil {
 		json.NewEncoder(response).Encode(book)
 
-	} else {
-		response.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(response).Encode("Item not found")
+		return
 	}
+
+	itemNotFound(response)
 
 }
 
@@ -65,11 +70,16 @@ func createId() string {
 	return strconv.Itoa(rand.Intn(10000000))
 }
 
-func createSingleBook(request *http.Request) Book {
+func createSingleBook(request *http.Request, createNewId bool, currentId string) Book {
 	var book Book
 	json.NewDecoder(request.Body).Decode(&book)
 
-	book.ID = createId()
+	if createNewId {
+		book.ID = createId()
+	} else {
+		book.ID = currentId
+	}
+
 	books = append(books, book)
 
 	return book
@@ -78,7 +88,7 @@ func createSingleBook(request *http.Request) Book {
 func createBook(response http.ResponseWriter, request *http.Request) {
 	setContentType(response)
 
-	book := createSingleBook(request)
+	book := createSingleBook(request, true, "")
 
 	response.WriteHeader(http.StatusCreated)
 	json.NewEncoder(response).Encode(book)
@@ -93,19 +103,21 @@ func updateBook(response http.ResponseWriter, request *http.Request) {
 	foundBook := findBook(params["id"])
 
 	if foundBook == nil {
-		response.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(response).Encode("Item not found")
+		itemNotFound(response)
+
+		return
 	}
 
 	for index, item := range books {
 		if item.ID == params["id"] {
 			books = append(books[:index], books[index+1:]...)
-			book := createSingleBook(request)
+			book := createSingleBook(request, false, foundBook.ID)
 			json.NewEncoder(response).Encode(book)
 			return
 		}
-		json.NewEncoder(response).Encode(books)
+
 	}
+	json.NewEncoder(response).Encode(books)
 
 }
 
@@ -117,8 +129,9 @@ func deleteBook(response http.ResponseWriter, request *http.Request) {
 	foundBook := findBook(params["id"])
 
 	if foundBook == nil {
-		response.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(response).Encode("Item not found")
+		itemNotFound(response)
+
+		return
 	}
 
 	for index, item := range books {
@@ -126,8 +139,9 @@ func deleteBook(response http.ResponseWriter, request *http.Request) {
 			books = append(books[:index], books[index+1:]...)
 			break
 		}
-		json.NewEncoder(response).Encode(books)
 	}
+
+	json.NewEncoder(response).Encode(books)
 
 }
 
