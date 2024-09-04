@@ -8,8 +8,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// import ("encoding/json" "log" "net/http" "math/rand", "strconv",)
-
 func main() {
 	router := mux.NewRouter()
 
